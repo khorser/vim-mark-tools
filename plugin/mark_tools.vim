@@ -1,6 +1,8 @@
 " Toggle and navigate bookmarks
-" Last Change: $HGLastChangedDate: 2012-12-07 10:28 +0400 $
-" URL: http://www.vim.org/scripts/script.php?script_id=2929
+" Last Change: $HGLastChangedDate$
+" URL:	http://www.vim.org/scripts/script.php?script_id=2929
+"	https://bitbucket.org/khorser/vim-mark-tools
+"	https://github.com/khorser/vim-mark-tools
 " Maintainer:  Sergey Khorev <sergey.khorev@gmail.com>
 " vim: set ft=vim ts=8 sts=2 sw=2:
 "
