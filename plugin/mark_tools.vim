@@ -20,6 +20,7 @@
 " <Plug>MarksLoc    - open location list window with local mark positions
 " <Plug>MarksQF	    - open quickfix window with marks
 " <Plug>MarksHighlightToggle - toggle highlighting of matched lines
+" <Plug>MarksClear  - clear all local marks
 "
 " recommended mapping:
 " nmap <Leader>a <Plug>ToggleMarkAZ
@@ -33,6 +34,7 @@
 " nmap <Leader>w <Plug>MarksLoc
 " nmap <Leader>W <Plug>MarksQF
 " nmap <leader>! <Plug>MarksHighlightToggle
+" nmap <leader>DDD <Plug>MarksClear
 " so
 " \a and \z toggle a mark at current line
 " \A and \Z force another mark
@@ -370,5 +372,7 @@ nnoremap <silent> <Plug>MarksLoc :call <SID>MarksLoc()<CR>
 nnoremap <silent> <Plug>MarksQF :call <SID>MarksQF()<CR>
 " suggested mapping: <Leader>!
 nnoremap <silent> <Plug>MarksHighlightToggle :call <SID>highlight_marks(2)<CR>
+" suggested mapping: <Leader>DDD
+nnoremap <silent> <Plug>MarksClear :call <SID>highlight_marks(0)\|:delmarks a-z<CR>
 
 let &cpo = s:save_cpo
