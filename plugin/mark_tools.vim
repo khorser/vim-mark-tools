@@ -19,6 +19,8 @@
 " <Plug>PrevMarkLexi- go to next mark in lexicographical order
 " <Plug>MarksLoc    - open location list window with local mark positions
 " <Plug>MarksQF	    - open quickfix window with marks
+" <Plug>MarksHighlightToggle - toggle highlighting of matched lines
+" <Plug>MarksClear  - clear all local marks
 "
 " recommended mapping:
 " nmap <Leader>a <Plug>ToggleMarkAZ
@@ -31,6 +33,8 @@
 " nmap <Leader>L <Plug>PrevMarkLexi
 " nmap <Leader>w <Plug>MarksLoc
 " nmap <Leader>W <Plug>MarksQF
+" nmap <leader>! <Plug>MarksHighlightToggle
+" nmap <leader>DDD <Plug>MarksClear
 " so
 " \a and \z toggle a mark at current line
 " \A and \Z force another mark
@@ -42,24 +46,43 @@
 " e.g. quickfixsigns (http://www.vim.org/scripts/script.php?script_id=2584)
 "
 " CUSTOMISATION:
-" toggle_marks_wrap_search variable controls whether search wraps around or not
-" (order of precedence: w:toggle_marks_wrap_search, b:toggle_marks_wrap_search, g:toggle_marks_wrap_search)
-" Possible values:
-" -1 - use 'wrapscan' option value
-"  0 - do not wrap
-"  1 - always wrap (default)
 "
-"  To customise marks which you want to see in location list and quickfix
-"  windows you can override variables below:
-"  let g:lmarks_names = 'abcdefghijklmnopqrstuvwxyz''.'
-"  let g:gmarks_names = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+" `toggle_marks_wrap_search` variable controls whether search wraps around or not
+"       (order of precedence: w:toggle_marks_wrap_search, b:toggle_marks_wrap_search, g:toggle_marks_wrap_search)
+"       Possible values:
+"       -1 - use 'wrapscan' option value
+"        0 - do not wrap
+"        1 - always wrap (default)
+"
+" `g:marktools_highlight_marked_lines` controls whether or not lines are
+" highlighted as they are marked
+"       0 - do not highlight
+"       1 - highlight (default)
+"
+" `marktools_highlight_default_on` controls whether lines whether marks
+" already in the buffer are highlighted
+"       0 - begin with highlighting off (default)
+"       1 - begin with highlighting on
+"
+" To customise marks which you want to see in location list and quickfix
+" windows you can override variables below:
+"       let g:lmarks_names = 'abcdefghijklmnopqrstuvwxyz''.'
+"       let g:gmarks_names = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
 "
 " When using \w and \W with quickfixsigns plugin, you may want to protect mark signs from
 " quickfix signs with:
-" let g:quickfixsigns_lists = [
-"      \ {'sign': 'QFS_QFL', 'get': 'g:NonMarkQFEntries()', 'event': ['BufEnter']},
-"      \ {'sign': 'QFS_LOC', 'get': 'g:NonMarkLocEntries(winnr())', 'event': ['BufEnter']},
-"      \ ]
+"   let g:quickfixsigns_lists = [
+"        \ {'sign': 'QFS_QFL', 'get': 'g:NonMarkQFEntries()', 'event': ['BufEnter']},
+"        \ {'sign': 'QFS_LOC', 'get': 'g:NonMarkLocEntries(winnr())', 'event': ['BufEnter']},
+"        \ ]
+"
+" Acknowledgements:
+"
+" - Highlighting of marked lines based on:
+"
+"       BOOKMARKS: Mark & Highlight Full Lines : Easily Highlight Lines with Marks, and Add/Remove Marks
+"       Ignacio Nunez
+"       http://www.vim.org/scripts/script.php?script_id=3394
 
 let s:save_cpo = &cpo
 set cpo&vim
@@ -68,6 +91,52 @@ if exists("loaded_toggle_local_marks")
   finish
 endif
 let loaded_toggle_local_marks = 1
+
+let s:marktools_highlight_group = "MarkToolsHighlight"
+if !hlexists(s:marktools_highlight_group)
+    execute "hi " . s:marktools_highlight_group . " term=reverse cterm=reverse gui=undercurl guisp=green"
+endif
+
+function! s:clear_previously_set_matches()
+    let cleared_matches = []
+    let mm = getmatches()
+    for m in mm
+        if m['group'] == s:marktools_highlight_group
+            call matchdelete(m['id'])
+            call add(cleared_matches, m['id'])
+        endif
+    endfor
+    return cleared_matches
+endfunction
+
+" state 0 = forced off, state 1 = forced on, state 2 = toggle
+function! s:highlight_marks(state)
+    if !exists("g:marktools_highlight_marked_lines") || g:marktools_highlight_marked_lines == 1
+        let cleared_matches = s:clear_previously_set_matches()
+        if (a:state == 1) || (a:state == 2 && empty(cleared_matches))
+            let index = char2nr('a')
+            while index < char2nr('z')
+                call matchadd(s:marktools_highlight_group, '\%'.line( "'".nr2char(index)).'l')
+                let index = index + 1
+            endwhile
+        endif
+    endif
+endfunction
+
+function! s:set_initial_highlight()
+    if !exists("b:marktools_highlighted")
+        call <SID>highlight_marks(1)
+        let b:marktools_highlighted = 1
+    endif
+endfunction
+if exists("g:marktools_highlight_default_on") && g:marktools_highlight_default_on == 1
+    if has("autocmd")
+        augroup MarkToolsHighlightCommands
+        autocmd!
+        autocmd BufEnter * :call <SID>set_initial_highlight()
+        augroup end
+    endif
+endif
 
 unlockvar s:marks_names
 unlockvar s:marks_count
@@ -149,6 +218,7 @@ function! s:ToggleMarks(a2z, forceAdd)
     else
       exec 'delma ' . l:marks_here[strlen(l:marks_here)-1]
     endif
+    call s:highlight_marks(1)
   else
     " no marks, add first available mark
     let l:used = s:UsedMarks()
@@ -157,6 +227,7 @@ function! s:ToggleMarks(a2z, forceAdd)
       for i in range(0, l:len-1)
 	if l:used[i] == ' '
 	  exec "normal m" . s:marks_names[i]
+      call s:highlight_marks(1)
 	  return
 	endif
       endfor
@@ -164,11 +235,13 @@ function! s:ToggleMarks(a2z, forceAdd)
       for i in range(l:len-1, 0, -1)
 	if l:used[i] == ' '
 	  exec "normal m" . s:marks_names[i]
+      call s:highlight_marks(1)
 	  return
 	endif
       endfor
     endif
   endif
+  call s:highlight_marks(1)
 endfunction
 
 function! s:GetWrapSearch()
@@ -305,5 +378,9 @@ nnoremap <silent> <Plug>PrevMarkLexi :call <SID>PrevByAlpha()<CR>
 " suggested mapping: <Leader>w and <Leader>W
 nnoremap <silent> <Plug>MarksLoc :call <SID>MarksLoc()<CR>
 nnoremap <silent> <Plug>MarksQF :call <SID>MarksQF()<CR>
+" suggested mapping: <Leader>!
+nnoremap <silent> <Plug>MarksHighlightToggle :call <SID>highlight_marks(2)<CR>
+" suggested mapping: <Leader>DDD
+nnoremap <silent> <Plug>MarksClear :call <SID>highlight_marks(0)\|:delmarks a-z<CR>
 
 let &cpo = s:save_cpo
