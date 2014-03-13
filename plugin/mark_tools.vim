@@ -69,6 +69,36 @@ if exists("loaded_toggle_local_marks")
 endif
 let loaded_toggle_local_marks = 1
 
+let s:marktools_highlight_group = "MarkToolsHighlight"
+if !hlexists(s:marktools_highlight_group)
+    execute "hi " . s:marktools_highlight_group . " term=reverse cterm=reverse gui=undercurl guisp=green"
+endif
+function! s:clear_previously_set_matches()
+    let cleared_matches = []
+    let mm = getmatches()
+    for m in mm
+        if m['group'] == s:marktools_highlight_group
+            call matchdelete(m['id'])
+            call add(cleared_matches, m['id'])
+        endif
+    endfor
+    return cleared_matches
+endfunction
+
+" state 0 = forced off, state 1 = forced on, state 2 = toggle
+function! s:highlight_marks(state)
+    if !exists("g:marktools_highlight_marked_lines") || g:marktools_highlight_marked_lines == 1
+        let cleared_matches = s:clear_previously_set_matches()
+        if (a:state == 1) || (a:state == 2 && empty(cleared_matches))
+            let index = char2nr('a')
+            while index < char2nr('z')
+                call matchadd(s:marktools_highlight_group, '\%'.line( "'".nr2char(index)).'l')
+                let index = index + 1
+            endwhile
+        endif
+    endif
+endfunction
+
 unlockvar s:marks_names
 unlockvar s:marks_count
 unlockvar s:marks_nlist
@@ -149,6 +179,7 @@ function! s:ToggleMarks(a2z, forceAdd)
     else
       exec 'delma ' . l:marks_here[strlen(l:marks_here)-1]
     endif
+    call s:highlight_marks(1)
   else
     " no marks, add first available mark
     let l:used = s:UsedMarks()
@@ -157,6 +188,7 @@ function! s:ToggleMarks(a2z, forceAdd)
       for i in range(0, l:len-1)
 	if l:used[i] == ' '
 	  exec "normal m" . s:marks_names[i]
+      call s:highlight_marks(1)
 	  return
 	endif
       endfor
@@ -164,11 +196,13 @@ function! s:ToggleMarks(a2z, forceAdd)
       for i in range(l:len-1, 0, -1)
 	if l:used[i] == ' '
 	  exec "normal m" . s:marks_names[i]
+      call s:highlight_marks(1)
 	  return
 	endif
       endfor
     endif
   endif
+  call s:highlight_marks(1)
 endfunction
 
 function! s:GetWrapSearch()
@@ -305,5 +339,7 @@ nnoremap <silent> <Plug>PrevMarkLexi :call <SID>PrevByAlpha()<CR>
 " suggested mapping: <Leader>w and <Leader>W
 nnoremap <silent> <Plug>MarksLoc :call <SID>MarksLoc()<CR>
 nnoremap <silent> <Plug>MarksQF :call <SID>MarksQF()<CR>
+" suggested mapping: <Leader>!
+nnoremap <silent> <Plug>MarksHighlightToggle :call <SID>highlight_marks(2)<CR>
 
 let &cpo = s:save_cpo
