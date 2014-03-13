@@ -75,6 +75,14 @@
 "        \ {'sign': 'QFS_QFL', 'get': 'g:NonMarkQFEntries()', 'event': ['BufEnter']},
 "        \ {'sign': 'QFS_LOC', 'get': 'g:NonMarkLocEntries(winnr())', 'event': ['BufEnter']},
 "        \ ]
+"
+" Acknowledgements:
+"
+" - Highlighting of marked lines based on:
+"
+"       BOOKMARKS: Mark & Highlight Full Lines : Easily Highlight Lines with Marks, and Add/Remove Marks
+"       Ignacio Nunez
+"       http://www.vim.org/scripts/script.php?script_id=3394
 
 let s:save_cpo = &cpo
 set cpo&vim
